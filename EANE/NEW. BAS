@@ -1,0 +1,126 @@
+@START
+CLS
+ACLS
+CLEAR
+COLOR 0
+INPUT "Insert an EAN-8 (8 digits): "; UPCA$
+CLS
+ACLS
+IF LEN(UPCA$) != 8 THEN
+    PRINT "Invalid EAN-8 length"
+    STOP
+END IF
+
+COLOR 1
+DIM UPC_ARRAY$(8), UPC_ARRAY(8)
+
+' Parse the input into arrays
+FOR I = 0 TO 7
+    UPC_ARRAY$(I) = MID$(UPCA$, I, 1)
+    UPC_ARRAY(I) = VAL(MID$(UPCA$, I, 1))
+NEXT I
+
+' Calculate the checksum
+ODDSUM = UPC_ARRAY(1) + UPC_ARRAY(3) + UPC_ARRAY(5)
+EVENSUM = (UPC_ARRAY(0) + UPC_ARRAY(2) + UPC_ARRAY(4) + UPC_ARRAY(6)) * 3
+ALLSUM = ODDSUM + EVENSUM
+CHECKSUM = ALLSUM % 10
+IF CHECKSUM > 0 THEN CHECKSUM = 10 - CHECKSUM
+
+' Update the last digit of the EAN-8 if checksum is incorrect
+IF CHECKSUM != UPC_ARRAY(7) THEN
+    UPCA$ = SUBST$(UPCA$, 7, 1, STR$(CHECKSUM))
+    UPC_ARRAY$(7) = STR$(CHECKSUM)
+    UPC_ARRAY(7) = CHECKSUM
+END IF
+
+' Draw the barcode
+GFILL 0, 0, 83, 62, 15
+GCOLOR 14
+GLINE 9, 10, 9, 54
+GLINE 11, 10, 11, 54
+
+' Prepare color arrays for the left side of the barcode
+DIM LEFTCOLOR(7)
+FOR C1START = 0 TO 3
+    LINESIZE = 48  ' Set default line size
+
+    ' Reset left color array for each digit
+    LEFTCOLOR = [0, 0, 0, 0, 0, 0, 0]
+
+    ' Set the colors based on the UPC digit
+    SELECT CASE VAL(UPC_ARRAY$(C1START))
+        CASE 0: LEFTCOLOR = [0, 0, 0, 1, 1, 0, 1]
+        CASE 1: LEFTCOLOR = [0, 0, 1, 1, 0, 0, 1]
+        CASE 2: LEFTCOLOR = [0, 0, 1, 0, 1, 0, 1]
+        CASE 3: LEFTCOLOR = [0, 1, 1, 1, 1, 0, 1]
+        CASE 4: LEFTCOLOR = [0, 1, 0, 0, 0, 1, 1]
+        CASE 5: LEFTCOLOR = [0, 1, 1, 0, 0, 1, 1]
+        CASE 6: LEFTCOLOR = [0, 1, 0, 1, 1, 1, 1]
+        CASE 7: LEFTCOLOR = [0, 1, 1, 1, 0, 1, 1]
+        CASE 8: LEFTCOLOR = [0, 1, 1, 0, 1, 1, 1]
+        CASE 9: LEFTCOLOR = [0, 0, 0, 1, 0, 1, 1]
+    END SELECT
+
+    ' Draw the lines for the left side
+    LINESTART = 12 + (C1START * 7)
+    FOR INC1START = 0 TO 6
+        IF LEFTCOLOR(INC1START) == 1 THEN
+            GCOLOR 14
+        ELSE
+            GCOLOR 15
+        END IF
+        GLINE LINESTART + INC1START, 10, LINESTART + INC1START, LINESIZE
+    NEXT INC1START
+NEXT C1START
+
+' Middle guard lines
+GCOLOR 14
+GLINE 39, 10, 39, 54
+GLINE 41, 10, 41, 54
+
+' Prepare color arrays for the right side of the barcode
+DIM RIGHTCOLOR(7)
+FOR C2START = 4 TO 7
+    LINESIZE = 48  ' Set default line size
+
+    ' Reset right color array for each digit
+    RIGHTCOLOR = [0, 0, 0, 0, 0, 0, 0]
+
+    ' Set the colors based on the UPC digit
+    SELECT CASE VAL(UPC_ARRAY$(C2START))
+        CASE 0: RIGHTCOLOR = [1, 1, 1, 0, 0, 1, 0]
+        CASE 1: RIGHTCOLOR = [1, 1, 0, 0, 1, 1, 0]
+        CASE 2: RIGHTCOLOR = [1, 1, 0, 1, 0, 1, 0]
+        CASE 3: RIGHTCOLOR = [1, 0, 0, 0, 0, 1, 0]
+        CASE 4: RIGHTCOLOR = [1, 0, 1, 1, 1, 0, 0]
+        CASE 5: RIGHTCOLOR = [1, 0, 0, 1, 1, 0, 0]
+        CASE 6: RIGHTCOLOR = [1, 0, 1, 0, 0, 0, 0]
+        CASE 7: RIGHTCOLOR = [1, 0, 0, 0, 1, 0, 0]
+        CASE 8: RIGHTCOLOR = [1, 0, 0, 1, 0, 0, 0]
+        CASE 9: RIGHTCOLOR = [1, 1, 1, 0, 1, 0, 0]
+    END SELECT
+
+    ' Draw the lines for the right side
+    LINESTART = 43 + ((C2START - 4) * 7)
+    FOR INC2START = 0 TO 6
+        IF RIGHTCOLOR(INC2START) == 1 THEN
+            GCOLOR 14
+        ELSE
+            GCOLOR 15
+        END IF
+        GLINE LINESTART + INC2START, 10, LINESTART + INC2START, LINESIZE
+    NEXT INC2START
+NEXT C2START
+
+' Final guard lines
+GCOLOR 14
+GLINE 71, 10, 71, 54
+GLINE 73, 10, 73, 54
+
+' Display the EAN-8 and Checksum
+PRINT " "
+PRINT "EAN-8: "; UPCA$
+PRINT "Checksum: "; CHECKSUM
+INPUT "Press Enter to continue"; RESTART$
+IF RESTART$ == "Y" OR RESTART$ == "y" THEN GOTO @START
